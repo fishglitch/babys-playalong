@@ -8,10 +8,11 @@ const reverb = new Tone.Reverb({
   decay: 2.5,
   preDelay: 0.1,
 }).toDestination();
+
 const synth = new Tone.PolySynth().connect(reverb);
 
 // Setup grid Data
-const rows = ["A4", "G4", "E4", "C4", "E4", "D4", "C4", "C5"]; // Note names
+const rows = ["A3", "A#4", "E4", "F4", "A4", "F4", "D4", "C#4"]; // Note names
 const cols = 8; // Number of columns
 const grid = [];
 
@@ -33,7 +34,7 @@ grid.forEach((row, rowIndex) => {
     const square = document.createElement("div");
     square.classList.add("cell");
 
-    square.textContent = "🐠";
+    square.textContent = "🛸";
     // Listen for clicks on each cell
     square.addEventListener("click", () => {
       grid[rowIndex][colIndex] = !grid[rowIndex][colIndex];
@@ -102,7 +103,7 @@ function startSequence() {
       rows.forEach((row, rowIndex) => {
         if (grid[rowIndex][col]) {
           // Check if the cell is active
-          synth.triggerAttackRelease(row, "8n", time); // Play note
+          synth.triggerAttackRelease(row, "9n", time); // Play note
         }
       });
       highlightColumn(col); // Highlight the current column
@@ -173,3 +174,4 @@ function clearSequence() {
   stopSequence(); // Stop the sequence if playing
   console.log("Grid cleared");
 }
+

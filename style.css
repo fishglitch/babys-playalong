@@ -16,15 +16,15 @@
 }
 
 .cell.active {
-    background: rgb(253, 225, 102);
+    background: rgb(102, 253, 200);
 }
 
 .cell.active.highlight {
-    background-color: #02ff0a; /* Highlighted column color */
+    background-color: #ffa5fc; /* Highlighted column color */
 }
 
 .cell.highlight {
-    background-color: #71e8fa;
+    background-color: #b788ff;
     border-color: #2fcb8f; /* Highlighted column color */
 }
 
