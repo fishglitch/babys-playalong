@@ -1,177 +1,130 @@
-const buttonStart = document.getElementById("start-button");
-const buttonClear = document.getElementById("clear-button");
+document.addEventListener('DOMContentLoaded', () => {
+  const buttonStart = document.getElementById("start-button");
+  const buttonClear = document.getElementById("clear-button");
+  const container = document.getElementById("content");
+  
+  const rows = ["A3", "A#4", "E4", "F4", "A4", "A#3", "D4", "C#4"];
+  const cols = 8;
+  const grid = Array.from({ length: rows.length }, () => Array(cols).fill(false));
+  const cells = [];
+  
+  let audioInitialized = false;
+  let isPlaying = false;
+  let sequence = null;
+  const synth = new Tone.PolySynth().connect(new Tone.Reverb({ decay: 2.5, preDelay: 0.1 }).toDestination());
 
-let audioInitialized = false; // Tone.js audio context initialization is set to false
-let isPlaying = false; // Sequence playing is set to false
-
-const reverb = new Tone.Reverb({
-  decay: 2.5,
-  preDelay: 0.1,
-}).toDestination();
-
-const synth = new Tone.PolySynth().connect(reverb);
-
-// Setup grid Data
-const rows = ["A3", "A#4", "E4", "F4", "A4", "F4", "D4", "C#4"]; // Note names
-const cols = 8; // Number of columns
-const grid = [];
-
-// Create the grid structure
-for (let i = 0; i < rows.length; i++) {
-  const row = [];
-  for (let j = 0; j < cols; j++) {
-    row.push(false);
-  }
-  grid.push(row);
-}
-
-const container = document.getElementById("content");
-const cells = []; // Array to store cell references
-
-grid.forEach((row, rowIndex) => {
-  const rowCells = [];
-  for (let colIndex = 0; colIndex < cols; colIndex++) {
-    const square = document.createElement("div");
-    square.classList.add("cell");
-
-    square.textContent = "🛸";
-    // Listen for clicks on each cell
-    square.addEventListener("click", () => {
-      grid[rowIndex][colIndex] = !grid[rowIndex][colIndex];
-      if (grid[rowIndex][colIndex]) {
-        square.classList.add("active");
-        playNote(rows[rowIndex], square); // Play note when cell is clicked
-      } else {
-        square.classList.remove("active");
+  // Initialize the grid
+  function createGrid() {
+    grid.forEach((row, rowIndex) => {
+      const rowCells = [];
+      for (let colIndex = 0; colIndex < cols; colIndex++) {
+        const square = document.createElement("div");
+        square.classList.add("cell");
+        square.textContent = "🛸";
+        square.addEventListener("click", () => handleCellClick(rowIndex, colIndex, square));
+        container.appendChild(square);
+        rowCells.push(square);
       }
+      cells.push(rowCells);
     });
-
-    container.appendChild(square);
-    rowCells.push(square);
   }
-  cells.push(rowCells);
-});
 
-// Function to start the Tone.js audio context
-function initializeAudio() {
-  return Tone.start()
-    .then(() => {
-      console.log("audio is ready");
-      audioInitialized = true; // Set audio flag to true
-    })
-    .catch((error) => {
-      console.log("audio not ready", error);
-    });
-}
+  function handleCellClick(rowIndex, colIndex, square) {
+    grid[rowIndex][colIndex] = !grid[rowIndex][colIndex];
+    square.classList.toggle("active");
+    playNote(rows[rowIndex], square);
+  }
 
-// Function to toggle the sequence
-function toggleSequence() {
-  if (!audioInitialized) {
-    initializeAudio().then(() => {
-      if (!isPlaying) {
-        startSequence();
-      }
-    });
-  } else {
-    if (isPlaying) {
-      stopSequence();
+  // Audio Initialization Functions
+  function initializeAudio() {
+    return Tone.start()
+      .then(() => {
+        console.log("Audio is ready");
+        audioInitialized = true;
+      })
+      .catch(error => {
+        console.log("Audio not ready", error);
+      });
+  }
+
+  // Sequence Functions
+  function toggleSequence() {
+    if (!audioInitialized) {
+      initializeAudio().then(() => isPlaying ? stopSequence() : startSequence());
     } else {
-      startSequence();
+      isPlaying ? stopSequence() : startSequence();
     }
-  }
-  // Add event listeners to buttons for the fish animation
-  buttonStart.classList("fish-animation");
-
-  // remove the animation class after fish animation ends
-  setTimeout(() => {
-    buttonStart.classList.remove("fish-animation");
-  }, 300); // Remove animation class after 1 second
-}
-
-// Create sequence variable
-let sequence;
-
-// Function to start the sequence
-function startSequence() {
-  if (sequence) {
-    sequence.dispose(); // Dispose of any existing sequence
+    animateButton(buttonStart);
   }
 
-  // Create a new Sequence
-  sequence = new Tone.Sequence(
-    (time, col) => {
-      rows.forEach((row, rowIndex) => {
+  function startSequence() {
+    sequence?.dispose(); // Dispose of any existing sequence
+
+    sequence = new Tone.Sequence((time, col) => {
+      rows.forEach((note, rowIndex) => {
         if (grid[rowIndex][col]) {
-          // Check if the cell is active
-          synth.triggerAttackRelease(row, "9n", time); // Play note
+          synth.triggerAttackRelease(note, "9n", time);
         }
       });
-      highlightColumn(col); // Highlight the current column
-    },
-    Array.from({ length: cols }, (_, i) => i),
-    "8n"
-  );
+      highlightColumn(col);
+    }, Array.from({ length: cols }, (_, i) => i), "8n");
 
-  sequence.start(0); // Start the sequence immediately
-  Tone.Transport.start(); // Start the transport
-
-  isPlaying = true; // Update playing state
-  buttonStart.textContent = "Stop Sequence"; // Change button text
-}
-
-// Function to stop the sequence
-function stopSequence() {
-  if (sequence) {
-    sequence.stop(); // Stop the sequence
-    Tone.Transport.stop(); // Stop the transport
-    sequence.dispose(); // Dispose of the sequence
+    sequence.start(0);
+    Tone.Transport.start();
+    isPlaying = true;
+    buttonStart.textContent = "Stop Sequence";
   }
 
-  isPlaying = false; // Update playing state
-  buttonStart.textContent = "Start Sequence"; // Change button text
-}
+  function stopSequence() {
+    sequence?.stop();
+    Tone.Transport.stop();
+    isPlaying = false;
+    buttonStart.textContent = "Start Sequence";
+  }
 
-// Highlight the current column
-function highlightColumn(col) {
-  // Clear previous highlights
-  cells.forEach((row) => {
-    row.forEach((cell) => {
-      cell.classList.remove("highlight");
-    });
-  });
-  // Highlight the current column
-  cells.forEach((row) => {
-    row[col].classList.add("highlight");
-  });
-}
+  // Highlighting Functions
+  function highlightColumn(col) {
+    cells.forEach(row => row.forEach(cell => cell.classList.remove("highlight")));
+    cells.forEach(row => row[col].classList.add("highlight"));
+  }
 
-// Function to play note immediately
-function playNote(note, cell) {
-  // Start the audio context if not already started
-  if (!audioInitialized) {
-    initializeAudio().then(() => {
+  // Play Note Function
+  function playNote(note, cell) {
+    if (!audioInitialized) {
+      initializeAudio().then(() => synth.triggerAttackRelease(note, "8n"));
+    } else {
       synth.triggerAttackRelease(note, "8n");
-    });
-  } else {
-    synth.triggerAttackRelease(note, "8n");
+    }
+    animateCell(cell);
   }
 
-  // animation class to have the fish emoji dance
-  cell.classList.add("fish-animation");
-  setTimeout(() => {
-    cell.classList.remove("fish-animation");
-  }, 300); // Remove animation class after 1 second
-}
+  // Animation Functions
+  function animateCell(cell) {
+    cell.classList.add("fish-animation");
+    setTimeout(() => cell.classList.remove("fish-animation"), 300);
+  }
 
-// clear the sequence and reset the grid
-function clearSequence() {
-  grid.forEach((row, rowIndex) => {
-    row.forEach((_, colIndex) => {
-      grid[rowIndex][colIndex] = false; // Reset the grid
-      cells[rowIndex][colIndex].classList.remove("active"); // Remove active class
+  function animateButton(button) {
+    button.classList.add("fish-animation");
+    setTimeout(() => button.classList.remove("fish-animation"), 300);
+  }
+
+  // Clear Sequence
+  function clearSequence() {
+    grid.forEach((row, rowIndex) => {
+      row.forEach((_, colIndex) => {
+        grid[rowIndex][colIndex] = false;
+        cells[rowIndex][colIndex].classList.remove("active");
+      });
     });
-  });
-  stopSequence(); // Stop the sequence if playing
-  console.log("Grid cleared");
-}
+    stopSequence();
+    console.log("Grid cleared");
+  }
 
+  // Event Listeners
+  buttonStart.addEventListener("click", toggleSequence);
+  buttonClear.addEventListener("click", clearSequence);
+  
+  // Initialize the grid on page load
+  createGrid();
+});
